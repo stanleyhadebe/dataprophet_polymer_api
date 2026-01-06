@@ -15,8 +15,18 @@ def ingest_polymers(
     db: Session = Depends(get_db),
     user=Depends(verify_token)
 ):
-    # insert logic here
-    pass
+    try:
+        for polymer_data in polymers:
+            polymer = Polymer(
+                timestamp=polymer_data.timestamp,
+                polymer=polymer_data.polymer
+            )
+            db.add(polymer)
+        db.commit()
+        return {"status": "success", "count": len(polymers)}
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(status_code=400, detail=str(e))
 
 @router.get("/polymers", response_model=list[PolymerOut])
 def get_polymers(
@@ -25,5 +35,11 @@ def get_polymers(
     db: Session = Depends(get_db),
     user=Depends(verify_token)
 ):
-    # retrieval logic here
-    pass
+    from datetime import datetime
+    start_dt = datetime.fromisoformat(start)
+    end_dt = datetime.fromisoformat(end)
+    polymers = db.query(Polymer).filter(
+        Polymer.timestamp >= start_dt,
+        Polymer.timestamp <= end_dt
+    ).all()
+    return polymers
